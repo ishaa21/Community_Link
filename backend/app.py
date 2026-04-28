@@ -11,6 +11,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import google.generativeai as genai
 from google.cloud import firestore
+from google.oauth2 import service_account
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,11 +26,20 @@ def get_db():
     global db
     if db is None:
         try:
-            # Uses GOOGLE_APPLICATION_CREDENTIALS env var or ADC
-            db = firestore.Client(
-    project=os.getenv("GOOGLE_CLOUD_PROJECT", "communitylink-493702"),
-    database="communitylink-db"
-)
+            service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+            if service_account_json:
+                creds_dict = json.loads(service_account_json)
+                credentials = service_account.Credentials.from_service_account_info(creds_dict)
+                db = firestore.Client(
+                    credentials=credentials,
+                    project=os.getenv("GOOGLE_CLOUD_PROJECT", "communitylink-493702"),
+                    database="communitylink-db"
+                )
+            else:
+                db = firestore.Client(
+                    project=os.getenv("GOOGLE_CLOUD_PROJECT", "communitylink-493702"),
+                    database="communitylink-db"
+                )
         except Exception as e:
             print(f"[Firestore] Could not connect: {e}")
             db = None
